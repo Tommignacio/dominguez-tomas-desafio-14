@@ -1,15 +1,39 @@
 import { Router } from "express";
-import cartsRouter from "./cartRoutes/CartRoutes.js";
-import chatsRouter from "./ChatRoutes/chatRoutes.js";
-import productsRouter from "./ProductRoutes/ProductRoutes.js";
-import testProductsRouter from "./test/testProductsRouter.js";
-
-
+import { fork } from "child_process";
 const router = Router();
 
-router.use("/api/productos", productsRouter);
-router.use("/api/carrito", cartsRouter);
-router.use("/api/productos-test", testProductsRouter);
-router.use("/api/chat", chatsRouter)
+const info = {
+	"Node version": process.version,
+	platformName: process.platform,
+	"Directorio de ejecución": process.cwd(),
+	"ID del proceso": process.pid,
+	"Uso de la memoria": process.memoryUsage(),
+	"Memoria total reservada (rss)": process.memoryUsage().rss,
+	"path de ejecución": process.execPath, //donde está el ejecutable de node
+	"Argumentos de entrada": process.argv,
+};
+
+//routes
+router.get("/info", (req, res) => {
+	res.send(info);
+});
+
+router.get("/api/randoms", (req, res) => {
+	//recibe por query  //http://localhost:8080/api/randoms?cant=1000
+	const cant = req.query.cant || 1000000;
+	//ejecuta la funcion asincronica(pesada)
+	const child = fork("./src/getRandom.js");
+	//envia la cantidad a getrandom
+	child.send(cant);
+	//escucha el resultado de la funcion getrandom
+	child.on("message", (msg) => {
+		//envia al html
+		res.send(msg);
+	});
+	//escucha el codigo cuando finaliza el proceso
+	child.on("exit", (code) => {
+		console.log("Se ha cerrado el proceso", code);
+	});
+});
 
 export default router;
